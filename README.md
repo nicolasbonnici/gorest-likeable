@@ -1,5 +1,9 @@
 # GoREST Likeable Plugin
 
+[![Test](https://github.com/nicolasbonnici/gorest-likeable/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/nicolasbonnici/gorest-likeable/actions/workflows/ci.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/nicolasbonnici/gorest-likeable)](https://goreportcard.com/report/github.com/nicolasbonnici/gorest-likeable)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 A polymorphic like/reaction plugin for GoREST that allows adding likes to any resource type.
 
 ## Features
