@@ -20,6 +20,10 @@ func (p *LikeablePlugin) Name() string {
 	return "likeable"
 }
 
+func (p *LikeablePlugin) Dependencies() []string {
+	return []string{"auth"}
+}
+
 func (p *LikeablePlugin) Initialize(config map[string]interface{}) error {
 	p.config = DefaultConfig()
 
