@@ -57,21 +57,27 @@ func (r *LikeResource) List(c *fiber.Ctx) error {
 	if err := filters.ParseFromQuery(queryParams); err != nil {
 		return pagination.SendPaginatedError(c, 400, err.Error())
 	}
-	whereClause, whereArgs := filters.BuildWhereClause()
 
 	ordering := filter.NewOrderSet(allowedFields)
 	if err := ordering.ParseFromQuery(queryParams); err != nil {
 		return pagination.SendPaginatedError(c, 400, err.Error())
 	}
-	orderByClause := ordering.BuildOrderByClause()
+
+	filterOrderClauses := ordering.OrderClauses()
+	orderByClauses := make([]crud.OrderByClause, len(filterOrderClauses))
+	for i, o := range filterOrderClauses {
+		orderByClauses[i] = crud.OrderByClause{
+			Column:    o.Column,
+			Direction: o.Direction,
+		}
+	}
 
 	result, err := r.CRUD.GetAllPaginated(auth.Context(c), crud.PaginationOptions{
-		Limit:         limit,
-		Offset:        offset,
-		IncludeCount:  includeCount,
-		WhereClause:   whereClause,
-		WhereArgs:     whereArgs,
-		OrderByClause: orderByClause,
+		Limit:        limit,
+		Offset:       offset,
+		IncludeCount: includeCount,
+		Conditions:   filters.Conditions(),
+		OrderBy:      orderByClauses,
 	})
 	if err != nil {
 		return pagination.SendPaginatedError(c, 500, err.Error())
