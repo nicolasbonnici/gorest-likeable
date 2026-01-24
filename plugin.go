@@ -81,3 +81,16 @@ func (p *LikeablePlugin) MigrationSource() interface{} {
 func (p *LikeablePlugin) MigrationDependencies() []string {
 	return []string{"auth"}
 }
+
+func (p *LikeablePlugin) GetOpenAPIResources() []plugin.OpenAPIResource {
+	return []plugin.OpenAPIResource{{
+		Name:          "like",
+		PluralName:    "likes",
+		BasePath:      "/likes",
+		Tags:          []string{"Likes"},
+		ResponseModel: Like{},
+		CreateModel:   CreateLikeRequest{},
+		UpdateModel:   UpdateLikeRequest{},
+		Description:   "Like/unlike system for posts and comments",
+	}}
+}

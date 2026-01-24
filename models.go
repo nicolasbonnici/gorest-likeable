@@ -26,6 +26,9 @@ type CreateLikeRequest struct {
 	LikedId    *string `json:"likedId,omitempty" validate:"omitempty,uuid"`
 }
 
+type UpdateLikeRequest struct {
+}
+
 func (r *CreateLikeRequest) Validate(config *Config) error {
 	// Validate likeable type
 	if r.Likeable == "user" {
