@@ -4,15 +4,17 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/nicolasbonnici/gorest-likeable)](https://goreportcard.com/report/github.com/nicolasbonnici/gorest-likeable)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-A polymorphic like/reaction plugin for GoREST that allows adding likes to any resource type.
+A polymorphic like/reaction plugin for GoREST that allows adding likes to any resource type. This plugin is **standalone** and does not require gorest-auth - it supports both authenticated and anonymous likes.
 
 ## Features
 
 - **Polymorphic Likes**: Add likes to any resource type (posts, articles, comments, etc.)
 - **User Likes**: Optional support for liking user profiles
+- **Anonymous Likes**: Tracks IP address and user agent when user is not authenticated
+- **Authenticated Likes**: Optionally integrates with auth middleware via context locals
 - **Duplicate Prevention**: Unique constraint prevents duplicate likes
 - **Configurable Allowed Types**: Control which resource types can be liked
-- **User Association**: Automatic user authentication integration
+- **Standalone**: No dependencies on auth plugins - works with or without authentication
 - **Pagination**: Built-in pagination support for like lists
 - **Go Migrations**: Database schema managed via Go code (not SQL files)
 
@@ -80,15 +82,45 @@ PUT /likes/:id
 DELETE /likes/:id
 ```
 
+## Authentication Integration
+
+This plugin works **with or without** authentication:
+
+### Authenticated Likes
+If your app uses authentication middleware that sets user information in the Fiber context, the plugin will automatically detect and use it. The middleware should set one of these context locals:
+- `user_id` (string)
+- `userId` (string)
+
+Example middleware:
+```go
+app.Use(func(c *fiber.Ctx) error {
+    // Your auth logic here
+    userID := extractUserFromToken(c)
+    c.Locals("user_id", userID)
+    return c.Next()
+})
+```
+
+When authenticated, the `liker_id` field is populated.
+
+### Anonymous Likes
+When no authentication context is available, likes are tracked using:
+- **IP Address**: The client's IP address
+- **User Agent**: The client's browser/app user agent
+
+This allows tracking likes from unauthenticated users while preventing abuse.
+
 ## Database Schema
 
 ```sql
 CREATE TABLE likes (
     id UUID PRIMARY KEY,
-    liker_id UUID REFERENCES users(id) ON DELETE SET NULL,
-    liked_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    liker_id UUID,                -- Nullable, set when user is authenticated
+    liked_id UUID,                -- Nullable, for user likes
     likeable_id UUID NOT NULL,
     likeable TEXT NOT NULL,
+    ip_address TEXT,              -- Nullable, set for anonymous likes
+    user_agent TEXT,              -- Nullable, set for anonymous likes
     liked_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -98,6 +130,7 @@ CREATE TABLE likes (
 -- Indexes
 CREATE INDEX idx_likeable ON likes(likeable, likeable_id, liked_at);
 CREATE INDEX idx_liker_id ON likes(liker_id);
+CREATE INDEX idx_anonymous_like ON likes(ip_address, user_agent);
 ```
 
 ## Usage Example

@@ -21,7 +21,7 @@ func (p *LikeablePlugin) Name() string {
 }
 
 func (p *LikeablePlugin) Dependencies() []string {
-	return []string{"auth"}
+	return []string{}
 }
 
 func (p *LikeablePlugin) Initialize(config map[string]interface{}) error {
@@ -79,7 +79,7 @@ func (p *LikeablePlugin) MigrationSource() interface{} {
 }
 
 func (p *LikeablePlugin) MigrationDependencies() []string {
-	return []string{"auth"}
+	return []string{}
 }
 
 func (p *LikeablePlugin) GetOpenAPIResources() []plugin.OpenAPIResource {
