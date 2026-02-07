@@ -2,10 +2,11 @@ package likeable
 
 import (
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	auth "github.com/nicolasbonnici/gorest-auth"
+	"github.com/google/uuid"
 	"github.com/nicolasbonnici/gorest/crud"
 	"github.com/nicolasbonnici/gorest/database"
 	"github.com/nicolasbonnici/gorest/filter"
@@ -40,25 +41,35 @@ func RegisterLikeRoutes(app *fiber.App, db database.Database, config *Config) {
 func (r *LikeResource) List(c *fiber.Ctx) error {
 	limit := pagination.ParseIntQuery(c, "limit", r.PaginationLimit, r.PaginationMaxLimit)
 	page := pagination.ParseIntQuery(c, "page", 1, 10000)
-	if page < 1 {
-		page = 1
-	}
+	page = max(page, 1)
 	offset := (page - 1) * limit
 	includeCount := c.Query("count", "true") != "false"
 
-	allowedFields := []string{"id", "liker_id", "liked_id", "likeable_id", "likeable", "liked_at", "updated_at", "created_at"}
+	// Field mapping: JSON field name -> DB column name
+	fieldMapping := map[string]string{
+		"id":         "id",
+		"likerId":    "liker_id",
+		"likedId":    "liked_id",
+		"likeableId": "likeable_id",
+		"likeable":   "likeable",
+		"ipAddress":  "ip_address",
+		"userAgent":  "user_agent",
+		"likedAt":    "liked_at",
+		"updatedAt":  "updated_at",
+		"createdAt":  "created_at",
+	}
 
 	queryParams := make(url.Values)
 	for key, value := range c.Context().QueryArgs().All() {
 		queryParams.Add(string(key), string(value))
 	}
 
-	filters := filter.NewFilterSet(allowedFields, r.DB.Dialect())
+	filters := filter.NewFilterSetWithMapping(fieldMapping, r.DB.Dialect())
 	if err := filters.ParseFromQuery(queryParams); err != nil {
 		return pagination.SendPaginatedError(c, 400, err.Error())
 	}
 
-	ordering := filter.NewOrderSet(allowedFields)
+	ordering := filter.NewOrderSetWithMapping(fieldMapping)
 	if err := ordering.ParseFromQuery(queryParams); err != nil {
 		return pagination.SendPaginatedError(c, 400, err.Error())
 	}
@@ -72,7 +83,7 @@ func (r *LikeResource) List(c *fiber.Ctx) error {
 		}
 	}
 
-	result, err := r.CRUD.GetAllPaginated(auth.Context(c), crud.PaginationOptions{
+	result, err := r.CRUD.GetAllPaginated(c.Context(), crud.PaginationOptions{
 		Limit:        limit,
 		Offset:       offset,
 		IncludeCount: includeCount,
@@ -88,7 +99,7 @@ func (r *LikeResource) List(c *fiber.Ctx) error {
 
 func (r *LikeResource) Get(c *fiber.Ctx) error {
 	id := c.Params("id")
-	item, err := r.CRUD.GetByID(auth.Context(c), id)
+	item, err := r.CRUD.GetByID(c.Context(), id)
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Not found"})
 	}
@@ -108,19 +119,30 @@ func (r *LikeResource) Create(c *fiber.Ctx) error {
 	}
 
 	var item Like
+	item.Id = uuid.New().String() // Generate UUID before insert
 	item.LikeableId = req.LikeableId
 	item.Likeable = req.Likeable
 	item.LikedId = req.LikedId
 	item.LikedAt = time.Now()
 
-	if user := auth.GetAuthenticatedUser(c); user != nil {
-		item.LikerId = &user.UserID
+	// Try to get user ID from context (set by auth middleware if available)
+	if userID := extractUserIDFromContext(c); userID != "" {
+		item.LikerId = &userID
+	} else {
+		// Store IP and User-Agent for anonymous likes
+		ip := c.IP()
+		ua := c.Get("User-Agent")
+		item.IpAddress = &ip
+		item.UserAgent = &ua
 	}
 
-	ctx := auth.Context(c)
+	ctx := c.Context()
 	if err := r.CRUD.Create(ctx, item); err != nil {
 		// Check if it's a duplicate like error
-		if err.Error() == "UNIQUE constraint failed" || err.Error() == "duplicate key value" {
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "UNIQUE constraint") ||
+		   strings.Contains(errMsg, "duplicate key") ||
+		   strings.Contains(errMsg, "violates unique constraint") {
 			return c.Status(409).JSON(fiber.Map{"error": "Already liked"})
 		}
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
@@ -138,7 +160,7 @@ func (r *LikeResource) Update(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	// Get existing like
-	existing, err := r.CRUD.GetByID(auth.Context(c), id)
+	existing, err := r.CRUD.GetByID(c.Context(), id)
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Not found"})
 	}
@@ -148,7 +170,7 @@ func (r *LikeResource) Update(c *fiber.Ctx) error {
 	existing.LikedAt = now
 	existing.UpdatedAt = &now
 
-	if err := r.CRUD.Update(auth.Context(c), id, *existing); err != nil {
+	if err := r.CRUD.Update(c.Context(), id, *existing); err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
 
@@ -157,8 +179,26 @@ func (r *LikeResource) Update(c *fiber.Ctx) error {
 
 func (r *LikeResource) Delete(c *fiber.Ctx) error {
 	id := c.Params("id")
-	if err := r.CRUD.Delete(auth.Context(c), id); err != nil {
+	if err := r.CRUD.Delete(c.Context(), id); err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
 	return c.SendStatus(204)
+}
+
+// extractUserIDFromContext tries to extract user ID from context
+// This allows optional integration with auth middleware that sets user ID in context
+// Example: c.Locals("user_id")
+func extractUserIDFromContext(c *fiber.Ctx) string {
+	// Try common context keys used by auth middleware
+	if userID := c.Locals("user_id"); userID != nil {
+		if id, ok := userID.(string); ok {
+			return id
+		}
+	}
+	if userID := c.Locals("userId"); userID != nil {
+		if id, ok := userID.(string); ok {
+			return id
+		}
+	}
+	return ""
 }

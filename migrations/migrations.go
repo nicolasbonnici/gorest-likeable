@@ -17,10 +17,12 @@ func GetMigrations() migrations.MigrationSource {
 			if err := migrations.SQL(ctx, db, migrations.DialectSQL{
 				Postgres: `CREATE TABLE IF NOT EXISTS likes (
 					id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-					liker_id UUID REFERENCES users(id) ON DELETE SET NULL,
-					liked_id UUID REFERENCES users(id) ON DELETE SET NULL,
+					liker_id UUID,
+					liked_id UUID,
 					likeable_id UUID NOT NULL,
 					likeable TEXT NOT NULL,
+					ip_address TEXT,
+					user_agent TEXT,
 					liked_at TIMESTAMP(0) WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
 					updated_at TIMESTAMP(0) WITH TIME ZONE,
 					created_at TIMESTAMP(0) WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -32,21 +34,24 @@ func GetMigrations() migrations.MigrationSource {
 					liked_id CHAR(36),
 					likeable_id CHAR(36) NOT NULL,
 					likeable VARCHAR(255) NOT NULL,
+					ip_address VARCHAR(255),
+					user_agent TEXT,
 					liked_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 					updated_at TIMESTAMP NULL,
 					created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-					FOREIGN KEY (liker_id) REFERENCES users(id) ON DELETE SET NULL,
-					FOREIGN KEY (liked_id) REFERENCES users(id) ON DELETE SET NULL,
 					UNIQUE KEY unique_like (liker_id, likeable, likeable_id),
 					INDEX idx_likeable (likeable, likeable_id, liked_at),
-					INDEX idx_liker_id (liker_id)
+					INDEX idx_liker_id (liker_id),
+					INDEX idx_anonymous_like (ip_address, user_agent(255))
 				) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 				SQLite: `CREATE TABLE IF NOT EXISTS likes (
 					id TEXT PRIMARY KEY,
-					liker_id TEXT REFERENCES users(id) ON DELETE SET NULL,
-					liked_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+					liker_id TEXT,
+					liked_id TEXT,
 					likeable_id TEXT NOT NULL,
 					likeable TEXT NOT NULL,
+					ip_address TEXT,
+					user_agent TEXT,
 					liked_at TEXT NOT NULL DEFAULT (datetime('now')),
 					updated_at TEXT,
 					created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -67,6 +72,12 @@ func GetMigrations() migrations.MigrationSource {
 				if err := migrations.CreateIndex(ctx, db, "idx_liker_id", "likes", "liker_id"); err != nil {
 					return err
 				}
+				// Index for anonymous likes
+				if err := migrations.SQL(ctx, db, migrations.DialectSQL{
+					Postgres: `CREATE INDEX IF NOT EXISTS idx_anonymous_like ON likes(ip_address, user_agent)`,
+				}); err != nil {
+					return err
+				}
 			}
 
 			if db.DriverName() == "sqlite" {
@@ -79,6 +90,12 @@ func GetMigrations() migrations.MigrationSource {
 				if err := migrations.CreateIndex(ctx, db, "idx_liker_id", "likes", "liker_id"); err != nil {
 					return err
 				}
+				// Index for anonymous likes
+				if err := migrations.SQL(ctx, db, migrations.DialectSQL{
+					SQLite: `CREATE INDEX IF NOT EXISTS idx_anonymous_like ON likes(ip_address, user_agent)`,
+				}); err != nil {
+					return err
+				}
 			}
 
 			return nil
@@ -88,6 +105,7 @@ func GetMigrations() migrations.MigrationSource {
 			if db.DriverName() == "postgres" || db.DriverName() == "sqlite" {
 				_ = migrations.DropIndex(ctx, db, "idx_likeable", "likes")
 				_ = migrations.DropIndex(ctx, db, "idx_liker_id", "likes")
+				_ = migrations.DropIndex(ctx, db, "idx_anonymous_like", "likes")
 			}
 
 			return migrations.DropTableIfExists(ctx, db, "likes")
