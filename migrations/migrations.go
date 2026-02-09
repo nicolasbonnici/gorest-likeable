@@ -112,5 +112,72 @@ func GetMigrations() migrations.MigrationSource {
 		},
 	)
 
+	builder.Add(
+		"20260209000003000",
+		"fix_unique_constraints_for_anonymous_likes",
+		func(ctx context.Context, db database.Database) error {
+			if err := migrations.SQL(ctx, db, migrations.DialectSQL{
+				Postgres: `
+					ALTER TABLE likes DROP CONSTRAINT IF EXISTS likes_liker_id_likeable_likeable_id_key;
+
+					CREATE UNIQUE INDEX IF NOT EXISTS unique_authenticated_like
+					ON likes(liker_id, likeable, likeable_id)
+					WHERE liker_id IS NOT NULL;
+
+					CREATE UNIQUE INDEX IF NOT EXISTS unique_anonymous_like
+					ON likes(ip_address, user_agent, likeable, likeable_id)
+					WHERE liker_id IS NULL;
+				`,
+				MySQL: `
+					ALTER TABLE likes DROP INDEX IF EXISTS unique_like;
+
+					CREATE UNIQUE INDEX unique_authenticated_like
+					ON likes(liker_id, likeable, likeable_id);
+
+					CREATE UNIQUE INDEX unique_anonymous_like
+					ON likes(ip_address(255), user_agent(255), likeable, likeable_id, liker_id);
+				`,
+				SQLite: `
+					DROP INDEX IF EXISTS unique_like;
+
+					CREATE UNIQUE INDEX IF NOT EXISTS unique_authenticated_like
+					ON likes(liker_id, likeable, likeable_id)
+					WHERE liker_id IS NOT NULL;
+
+					CREATE UNIQUE INDEX IF NOT EXISTS unique_anonymous_like
+					ON likes(ip_address, user_agent, likeable, likeable_id)
+					WHERE liker_id IS NULL;
+				`,
+			}); err != nil {
+				return err
+			}
+
+			return nil
+		},
+		func(ctx context.Context, db database.Database) error {
+			if err := migrations.SQL(ctx, db, migrations.DialectSQL{
+				Postgres: `
+					DROP INDEX IF EXISTS unique_authenticated_like;
+					DROP INDEX IF EXISTS unique_anonymous_like;
+					ALTER TABLE likes ADD CONSTRAINT likes_liker_id_likeable_likeable_id_key
+					UNIQUE (liker_id, likeable, likeable_id);
+				`,
+				MySQL: `
+					DROP INDEX IF EXISTS unique_authenticated_like ON likes;
+					DROP INDEX IF EXISTS unique_anonymous_like ON likes;
+					CREATE UNIQUE INDEX unique_like ON likes(liker_id, likeable, likeable_id);
+				`,
+				SQLite: `
+					DROP INDEX IF EXISTS unique_authenticated_like;
+					DROP INDEX IF EXISTS unique_anonymous_like;
+				`,
+			}); err != nil {
+				return err
+			}
+
+			return nil
+		},
+	)
+
 	return builder.Build()
 }
