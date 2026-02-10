@@ -6,16 +6,16 @@ import (
 )
 
 type Like struct {
-	Id         string     `json:"id,omitempty" db:"id"`
-	LikerId    *string    `json:"likerId,omitempty" db:"liker_id"`
-	LikedId    *string    `json:"likedId,omitempty" db:"liked_id"`
-	LikeableId string     `json:"likeableId" db:"likeable_id"`
-	Likeable   string     `json:"likeable" db:"likeable"`
-	IpAddress  *string    `json:"ipAddress,omitempty" db:"ip_address"`
-	UserAgent  *string    `json:"userAgent,omitempty" db:"user_agent"`
-	LikedAt    time.Time  `json:"likedAt" db:"liked_at"`
-	UpdatedAt  *time.Time `json:"updatedAt,omitempty" db:"updated_at"`
-	CreatedAt  *time.Time `json:"createdAt,omitempty" db:"created_at"`
+	Id         string     `json:"id,omitempty" db:"id" rbac:"read:*;write:none"`
+	LikerId    *string    `json:"likerId,omitempty" db:"liker_id" rbac:"read:*;write:reader"`
+	LikedId    *string    `json:"likedId,omitempty" db:"liked_id" rbac:"read:*;write:reader"`
+	LikeableId string     `json:"likeableId" db:"likeable_id" rbac:"read:*;write:reader"`
+	Likeable   string     `json:"likeable" db:"likeable" rbac:"read:*;write:reader"`
+	IpAddress  *string    `json:"ipAddress,omitempty" db:"ip_address" rbac:"read:*;write:none"`
+	UserAgent  *string    `json:"userAgent,omitempty" db:"user_agent" rbac:"read:*;write:none"`
+	LikedAt    time.Time  `json:"likedAt" db:"liked_at" rbac:"read:*;write:reader"`
+	UpdatedAt  *time.Time `json:"updatedAt,omitempty" db:"updated_at" rbac:"read:*;write:none"`
+	CreatedAt  *time.Time `json:"createdAt,omitempty" db:"created_at" rbac:"read:*;write:none"`
 }
 
 func (Like) TableName() string {
