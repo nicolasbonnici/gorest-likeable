@@ -7,7 +7,6 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/nicolasbonnici/gorest v0.4.9
 	github.com/nicolasbonnici/gorest-auth v0.1.6
-	github.com/nicolasbonnici/gorest-rbac v0.1.0
 )
 
 require (
