@@ -7,6 +7,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	auth "github.com/nicolasbonnici/gorest-auth"
 	"github.com/nicolasbonnici/gorest/crud"
 	"github.com/nicolasbonnici/gorest/database"
 	"github.com/nicolasbonnici/gorest/filter"
@@ -83,7 +84,7 @@ func (r *LikeResource) List(c *fiber.Ctx) error {
 		}
 	}
 
-	result, err := r.CRUD.GetAllPaginated(c.Context(), crud.PaginationOptions{
+	result, err := r.CRUD.GetAllPaginated(auth.Context(c), crud.PaginationOptions{
 		Limit:        limit,
 		Offset:       offset,
 		IncludeCount: includeCount,
@@ -99,7 +100,7 @@ func (r *LikeResource) List(c *fiber.Ctx) error {
 
 func (r *LikeResource) Get(c *fiber.Ctx) error {
 	id := c.Params("id")
-	item, err := r.CRUD.GetByID(c.Context(), id)
+	item, err := r.CRUD.GetByID(auth.Context(c), id)
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Not found"})
 	}
@@ -118,31 +119,37 @@ func (r *LikeResource) Create(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
 	}
 
+	ctx := auth.Context(c)
+
 	var item Like
-	item.Id = uuid.New().String() // Generate UUID before insert
+	item.Id = uuid.New().String()
 	item.LikeableId = req.LikeableId
 	item.Likeable = req.Likeable
 	item.LikedId = req.LikedId
 	item.LikedAt = time.Now()
 
-	// Try to get user ID from context (set by auth middleware if available)
-	if userID := extractUserIDFromContext(c); userID != "" {
-		item.LikerId = &userID
-	} else {
-		// Store IP and User-Agent for anonymous likes
-		ip := c.IP()
-		ua := c.Get("User-Agent")
-		item.IpAddress = &ip
-		item.UserAgent = &ua
+	// Set LikerId if user is authenticated
+	user := auth.GetAuthenticatedUser(c)
+	if user != nil {
+		item.LikerId = &user.UserID
 	}
 
-	ctx := c.Context()
+	// Capture IP address and User Agent for anonymous likes
+	ipAddress := c.IP()
+	userAgent := c.Get("User-Agent")
+	if ipAddress != "" {
+		item.IpAddress = &ipAddress
+	}
+	if userAgent != "" {
+		item.UserAgent = &userAgent
+	}
+
 	if err := r.CRUD.Create(ctx, item); err != nil {
 		// Check if it's a duplicate like error
 		errMsg := err.Error()
 		if strings.Contains(errMsg, "UNIQUE constraint") ||
-		   strings.Contains(errMsg, "duplicate key") ||
-		   strings.Contains(errMsg, "violates unique constraint") {
+			strings.Contains(errMsg, "duplicate key") ||
+			strings.Contains(errMsg, "violates unique constraint") {
 			return c.Status(409).JSON(fiber.Map{"error": "Already liked"})
 		}
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
@@ -157,48 +164,28 @@ func (r *LikeResource) Create(c *fiber.Ctx) error {
 }
 
 func (r *LikeResource) Update(c *fiber.Ctx) error {
-	id := c.Params("id")
-
-	// Get existing like
-	existing, err := r.CRUD.GetByID(c.Context(), id)
-	if err != nil {
-		return c.Status(404).JSON(fiber.Map{"error": "Not found"})
-	}
-
-	// Update liked_at timestamp
-	now := time.Now()
-	existing.LikedAt = now
-	existing.UpdatedAt = &now
-
-	if err := r.CRUD.Update(c.Context(), id, *existing); err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
-	}
-
-	return response.SendFormatted(c, 200, existing)
+	return c.Status(405).JSON(fiber.Map{"error": "Method not implemented"})
 }
 
 func (r *LikeResource) Delete(c *fiber.Ctx) error {
 	id := c.Params("id")
-	if err := r.CRUD.Delete(c.Context(), id); err != nil {
+	ctx := auth.Context(c)
+
+	// Get existing like to check ownership
+	existing, err := r.CRUD.GetByID(ctx, id)
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Not found"})
+	}
+
+	// Check ownership
+	user := auth.GetAuthenticatedUser(c)
+	if user == nil || existing.LikerId == nil || *existing.LikerId != user.UserID {
+		return c.Status(403).JSON(fiber.Map{"error": "You can only delete your own likes"})
+	}
+
+	if err := r.CRUD.Delete(ctx, id); err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
-	return c.SendStatus(204)
-}
 
-// extractUserIDFromContext tries to extract user ID from context
-// This allows optional integration with auth middleware that sets user ID in context
-// Example: c.Locals("user_id")
-func extractUserIDFromContext(c *fiber.Ctx) string {
-	// Try common context keys used by auth middleware
-	if userID := c.Locals("user_id"); userID != nil {
-		if id, ok := userID.(string); ok {
-			return id
-		}
-	}
-	if userID := c.Locals("userId"); userID != nil {
-		if id, ok := userID.(string); ok {
-			return id
-		}
-	}
-	return ""
+	return c.SendStatus(204)
 }
