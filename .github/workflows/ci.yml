@@ -84,10 +84,11 @@ jobs:
           echo "✓ gocyclo passed (all functions ≤ 15 complexity)"
 
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: latest
-          install-mode: goinstall
+        run: |
+          echo "Running golangci-lint comprehensive checks..."
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+          golangci-lint run
+          echo "✓ golangci-lint passed"
 
       - name: Quality check summary
         if: success()
