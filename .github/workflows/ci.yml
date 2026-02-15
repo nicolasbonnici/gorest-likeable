@@ -7,8 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  lint:
-    name: Lint
+  quality:
+    name: Quality Checks (Go Report Card + Lint)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -19,15 +19,99 @@ jobs:
         with:
           go-version: stable
 
+      - name: Install quality check tools
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@latest
+          go install github.com/gordonklaus/ineffassign@latest
+          go install github.com/client9/misspell/cmd/misspell@latest
+          go install github.com/kisielk/errcheck@latest
+          go install github.com/fzipp/gocyclo/cmd/gocyclo@latest
+
+      - name: Check gofmt formatting
+        run: |
+          # Run gofmt -s (simplify) and check if any files need formatting
+          UNFORMATTED=$(gofmt -s -l .)
+          if [ -n "$UNFORMATTED" ]; then
+            echo "❌ The following files are not properly formatted:"
+            echo "$UNFORMATTED"
+            echo ""
+            echo "Run 'gofmt -s -w .' to fix formatting issues"
+            exit 1
+          fi
+          echo "✓ All files are properly formatted"
+
+      - name: Run go vet
+        run: |
+          echo "Running go vet..."
+          go vet ./...
+          echo "✓ go vet passed"
+
+      - name: Run staticcheck
+        run: |
+          echo "Running staticcheck..."
+          staticcheck ./...
+          echo "✓ staticcheck passed"
+
+      - name: Check for ineffectual assignments
+        run: |
+          echo "Running ineffassign..."
+          ineffassign ./...
+          echo "✓ ineffassign passed"
+
+      - name: Check for misspellings
+        run: |
+          echo "Running misspell..."
+          misspell -error .
+          echo "✓ misspell passed"
+
+      - name: Check for unchecked errors
+        run: |
+          echo "Running errcheck..."
+          errcheck ./...
+          echo "✓ errcheck passed"
+
+      - name: Check cyclomatic complexity
+        run: |
+          echo "Running gocyclo (threshold: 15)..."
+          COMPLEX=$(gocyclo -over 15 .)
+          if [ -n "$COMPLEX" ]; then
+            echo "❌ The following functions have cyclomatic complexity > 15:"
+            echo "$COMPLEX"
+            echo ""
+            echo "Consider refactoring these functions to reduce complexity"
+            exit 1
+          fi
+          echo "✓ gocyclo passed (all functions ≤ 15 complexity)"
+
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
           version: latest
           install-mode: goinstall
 
+      - name: Quality check summary
+        if: success()
+        run: |
+          echo "======================================================="
+          echo "✓ All quality checks passed!"
+          echo "======================================================="
+          echo "Go Report Card Checks:"
+          echo "  ✓ gofmt -s (formatting)"
+          echo "  ✓ go vet (correctness)"
+          echo "  ✓ staticcheck (static analysis)"
+          echo "  ✓ ineffassign (ineffectual assignments)"
+          echo "  ✓ misspell (spelling)"
+          echo "  ✓ errcheck (error handling)"
+          echo "  ✓ gocyclo (complexity ≤ 15)"
+          echo ""
+          echo "Additional Checks:"
+          echo "  ✓ golangci-lint (comprehensive linting)"
+          echo "======================================================="
+
   test:
     name: Test
     runs-on: ubuntu-latest
+    needs: [quality]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -56,7 +140,7 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [lint, test]
+    needs: [quality, test]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
