@@ -24,6 +24,20 @@ A polymorphic like/reaction plugin for GoREST that allows adding likes to any re
 go get github.com/nicolasbonnici/gorest-likeable
 ```
 
+
+## Development Environment
+
+To set up your development environment:
+
+```bash
+make install
+```
+
+This will:
+- Install Go dependencies
+- Install development tools (golangci-lint)
+- Set up git hooks (pre-commit linting and tests)
+
 ## Configuration
 
 ```yaml
