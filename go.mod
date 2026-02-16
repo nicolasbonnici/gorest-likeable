@@ -1,11 +1,11 @@
 module github.com/nicolasbonnici/gorest-likeable
 
-go 1.25.1
+go 1.26
 
 require (
 	github.com/gofiber/fiber/v2 v2.52.11
 	github.com/google/uuid v1.6.0
-	github.com/nicolasbonnici/gorest v0.4.9
+	github.com/nicolasbonnici/gorest v0.4.11
 	github.com/nicolasbonnici/gorest-auth v0.1.7
 )
 
