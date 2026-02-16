@@ -8,7 +8,7 @@ on:
 
 jobs:
   quality:
-    name: Quality Checks (Go Report Card + Lint)
+    name: Code quality checks
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -110,7 +110,7 @@ jobs:
           echo "======================================================="
 
   test:
-    name: Test
+    name: Test suite
     runs-on: ubuntu-latest
     needs: [quality]
     steps:
