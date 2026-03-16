@@ -88,9 +88,9 @@ func (p *LikeablePlugin) GetOpenAPIResources() []plugin.OpenAPIResource {
 		PluralName:    "likes",
 		BasePath:      "/likes",
 		Tags:          []string{"Likes"},
-		ResponseModel: Like{},
-		CreateModel:   CreateLikeRequest{},
-		UpdateModel:   UpdateLikeRequest{},
+		ResponseModel: LikeResponseDTO{},
+		CreateModel:   LikeCreateDTO{},
+		UpdateModel:   LikeUpdateDTO{},
 		Description:   "Like/unlike system for posts and comments",
 	}}
 }

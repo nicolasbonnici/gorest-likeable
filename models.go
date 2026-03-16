@@ -1,7 +1,6 @@
 package likeable
 
 import (
-	"errors"
 	"time"
 )
 
@@ -20,31 +19,4 @@ type Like struct {
 
 func (Like) TableName() string {
 	return "likes"
-}
-
-type CreateLikeRequest struct {
-	LikeableId string  `json:"likeableId" validate:"required,uuid"`
-	Likeable   string  `json:"likeable" validate:"required"`
-	LikedId    *string `json:"likedId,omitempty" validate:"omitempty,uuid"`
-}
-
-type UpdateLikeRequest struct {
-}
-
-func (r *CreateLikeRequest) Validate(config *Config) error {
-	// Validate likeable type
-	if r.Likeable == "user" {
-		if !config.EnableUserLikes {
-			return errors.New("user likes are not enabled")
-		}
-		if r.LikedId == nil || *r.LikedId == "" {
-			return errors.New("likedId is required when liking a user")
-		}
-	} else {
-		if !config.IsAllowedType(r.Likeable) {
-			return errors.New("likeable type is not allowed")
-		}
-	}
-
-	return nil
 }
