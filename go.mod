@@ -7,7 +7,7 @@ toolchain go1.26.0
 require (
 	github.com/gofiber/fiber/v2 v2.52.12
 	github.com/google/uuid v1.6.0
-	github.com/nicolasbonnici/gorest v0.4.12
+	github.com/nicolasbonnici/gorest v0.4.13
 	github.com/nicolasbonnici/gorest-auth v0.1.11
 )
 
@@ -30,5 +30,3 @@ require (
 	golang.org/x/sys v0.42.0 // indirect
 	golang.org/x/text v0.35.0 // indirect
 )
-
-replace github.com/nicolasbonnici/gorest => ../gorest
