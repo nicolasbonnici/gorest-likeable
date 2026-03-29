@@ -27,13 +27,13 @@ func (h *LikeErrorHandler) HandleError(c *fiber.Ctx, err error, operation string
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
 	case "validate":
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
-	case "getByID", "getAll":
-		if strings.Contains(err.Error(), "not found") {
+	case "getById", "getAll":
+		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "no rows in result set") {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Not found"})
 		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	case "update", "delete":
-		if strings.Contains(err.Error(), "not found") {
+		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "no rows in result set") {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Not found"})
 		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
