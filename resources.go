@@ -11,7 +11,7 @@ type LikeResource struct {
 	processor processor.Processor[Like, LikeCreateDTO, LikeUpdateDTO, LikeResponseDTO]
 }
 
-func RegisterLikeRoutes(app *fiber.App, db database.Database, config *Config) {
+func RegisterLikeRoutes(router fiber.Router, db database.Database, config *Config) {
 	likeCRUD := crud.New[Like](db)
 	hooks := NewLikeHooks(db, config)
 	converter := &LikeConverter{}
@@ -49,11 +49,11 @@ func RegisterLikeRoutes(app *fiber.App, db database.Database, config *Config) {
 		processor: proc,
 	}
 
-	app.Get("/likes", res.GetAll)
-	app.Get("/likes/:id", res.GetByID)
-	app.Post("/likes", res.Create)
-	app.Put("/likes/:id", res.Update)
-	app.Delete("/likes/:id", res.Delete)
+	router.Get("/likes", res.GetAll)
+	router.Get("/likes/:id", res.GetByID)
+	router.Post("/likes", res.Create)
+	router.Put("/likes/:id", res.Update)
+	router.Delete("/likes/:id", res.Delete)
 }
 
 func (r *LikeResource) Create(c *fiber.Ctx) error {

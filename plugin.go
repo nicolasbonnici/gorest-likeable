@@ -65,12 +65,12 @@ func (p *LikeablePlugin) Handler() fiber.Handler {
 	}
 }
 
-func (p *LikeablePlugin) SetupEndpoints(app *fiber.App) error {
+func (p *LikeablePlugin) SetupEndpoints(router fiber.Router) error {
 	if p.db == nil {
 		return nil
 	}
 
-	RegisterRoutes(app, p.db, &p.config)
+	RegisterRoutes(router, p.db, &p.config)
 	return nil
 }
 
