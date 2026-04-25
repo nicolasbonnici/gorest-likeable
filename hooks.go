@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	"github.com/gofiber/fiber/v2"
-	auth "github.com/nicolasbonnici/gorest-auth"
+	auth "github.com/nicolasbonnici/gorest/auth"
 	"github.com/nicolasbonnici/gorest/crud"
 	"github.com/nicolasbonnici/gorest/database"
 	"github.com/nicolasbonnici/gorest/query"
