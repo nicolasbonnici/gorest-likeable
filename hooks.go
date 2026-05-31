@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	auth "github.com/nicolasbonnici/gorest/auth"
 	"github.com/nicolasbonnici/gorest/crud"
 	"github.com/nicolasbonnici/gorest/database"
@@ -23,7 +23,7 @@ func NewLikeHooks(db database.Database, config *Config) *LikeHooks {
 	}
 }
 
-func (h *LikeHooks) CreateHook(c *fiber.Ctx, dto LikeCreateDTO, model *Like) error {
+func (h *LikeHooks) CreateHook(c fiber.Ctx, dto LikeCreateDTO, model *Like) error {
 	if dto.Likeable == "user" {
 		if !h.config.EnableUserLikes {
 			return fiber.NewError(400, "user likes are not enabled")
@@ -54,11 +54,11 @@ func (h *LikeHooks) CreateHook(c *fiber.Ctx, dto LikeCreateDTO, model *Like) err
 	return nil
 }
 
-func (h *LikeHooks) UpdateHook(c *fiber.Ctx, dto LikeUpdateDTO, model *Like) error {
+func (h *LikeHooks) UpdateHook(c fiber.Ctx, dto LikeUpdateDTO, model *Like) error {
 	return fiber.NewError(405, "Method not implemented")
 }
 
-func (h *LikeHooks) DeleteHook(c *fiber.Ctx, id any) error {
+func (h *LikeHooks) DeleteHook(c fiber.Ctx, id any) error {
 	ctx := auth.Context(c)
 
 	existing, err := h.getLike(ctx, id)
@@ -74,7 +74,7 @@ func (h *LikeHooks) DeleteHook(c *fiber.Ctx, id any) error {
 	return nil
 }
 
-func (h *LikeHooks) GetAllHook(c *fiber.Ctx, conditions *[]query.Condition, orderBy *[]crud.OrderByClause) error {
+func (h *LikeHooks) GetAllHook(c fiber.Ctx, conditions *[]query.Condition, orderBy *[]crud.OrderByClause) error {
 	return nil
 }
 

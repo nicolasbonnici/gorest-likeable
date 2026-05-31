@@ -3,12 +3,12 @@ package likeable
 import (
 	"strings"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 type LikeErrorHandler struct{}
 
-func (h *LikeErrorHandler) HandleError(c *fiber.Ctx, err error, operation string) error {
+func (h *LikeErrorHandler) HandleError(c fiber.Ctx, err error, operation string) error {
 	if operation == "create" {
 		errMsg := err.Error()
 		if strings.Contains(errMsg, "UNIQUE constraint") ||

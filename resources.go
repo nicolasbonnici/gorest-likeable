@@ -1,7 +1,7 @@
 package likeable
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/nicolasbonnici/gorest/crud"
 	"github.com/nicolasbonnici/gorest/database"
 	"github.com/nicolasbonnici/gorest/processor"
@@ -56,22 +56,22 @@ func RegisterLikeRoutes(router fiber.Router, db database.Database, config *Confi
 	router.Delete("/likes/:id", res.Delete)
 }
 
-func (r *LikeResource) Create(c *fiber.Ctx) error {
+func (r *LikeResource) Create(c fiber.Ctx) error {
 	return r.processor.Create(c)
 }
 
-func (r *LikeResource) GetByID(c *fiber.Ctx) error {
+func (r *LikeResource) GetByID(c fiber.Ctx) error {
 	return r.processor.GetByID(c)
 }
 
-func (r *LikeResource) GetAll(c *fiber.Ctx) error {
+func (r *LikeResource) GetAll(c fiber.Ctx) error {
 	return r.processor.GetAll(c)
 }
 
-func (r *LikeResource) Update(c *fiber.Ctx) error {
+func (r *LikeResource) Update(c fiber.Ctx) error {
 	return r.processor.Update(c)
 }
 
-func (r *LikeResource) Delete(c *fiber.Ctx) error {
+func (r *LikeResource) Delete(c fiber.Ctx) error {
 	return r.processor.Delete(c)
 }
