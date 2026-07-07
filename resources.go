@@ -2,6 +2,7 @@ package likeable
 
 import (
 	"github.com/gofiber/fiber/v3"
+	auth "github.com/nicolasbonnici/gorest/auth"
 	"github.com/nicolasbonnici/gorest/crud"
 	"github.com/nicolasbonnici/gorest/database"
 	"github.com/nicolasbonnici/gorest/processor"
@@ -9,6 +10,7 @@ import (
 
 type LikeResource struct {
 	processor processor.Processor[Like, LikeCreateDTO, LikeUpdateDTO, LikeResponseDTO]
+	service   *LikeService
 }
 
 func RegisterLikeRoutes(router fiber.Router, db database.Database, config *Config) {
@@ -47,9 +49,14 @@ func RegisterLikeRoutes(router fiber.Router, db database.Database, config *Confi
 
 	res := &LikeResource{
 		processor: proc,
+		service:   NewLikeService(db),
 	}
 
 	router.Get("/likes", res.GetAll)
+	// Static routes are registered before the "/likes/:id" parameter route so
+	// they are not shadowed by it.
+	router.Get("/likes/count", res.Count)
+	router.Post("/likes/state", res.State)
 	router.Get("/likes/:id", res.GetByID)
 	router.Post("/likes", res.Create)
 	router.Put("/likes/:id", res.Update)
@@ -74,4 +81,66 @@ func (r *LikeResource) Update(c fiber.Ctx) error {
 
 func (r *LikeResource) Delete(c fiber.Ctx) error {
 	return r.processor.Delete(c)
+}
+
+func (r *LikeResource) Count(c fiber.Ctx) error {
+	likeableType := c.Query("likeable")
+	likeableID := c.Query("likeableId")
+	if likeableType == "" || likeableID == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "likeable and likeableId are required")
+	}
+
+	ctx := auth.Context(c)
+	count, err := r.service.Count(ctx, likeableType, likeableID)
+	if err != nil {
+		return err
+	}
+
+	liked := false
+	if user := auth.GetAuthenticatedUser(c); user != nil {
+		states, err := r.service.LikedByBatch(ctx, user.UserID, likeableType, []string{likeableID})
+		if err != nil {
+			return err
+		}
+		liked = states[likeableID]
+	}
+
+	return c.JSON(LikeCountResponseDTO{
+		Likeable:   likeableType,
+		LikeableId: likeableID,
+		Count:      count,
+		Liked:      liked,
+	})
+}
+
+func (r *LikeResource) State(c fiber.Ctx) error {
+	var req LikeStateRequestDTO
+	if err := c.Bind().Body(&req); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid request body")
+	}
+	if req.Likeable == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "likeable is required")
+	}
+
+	ctx := auth.Context(c)
+	counts, err := r.service.CountBatch(ctx, req.Likeable, req.LikeableIds)
+	if err != nil {
+		return err
+	}
+
+	likerID := ""
+	if user := auth.GetAuthenticatedUser(c); user != nil {
+		likerID = user.UserID
+	}
+	liked, err := r.service.LikedByBatch(ctx, likerID, req.Likeable, req.LikeableIds)
+	if err != nil {
+		return err
+	}
+
+	states := make(map[string]LikeStateDTO, len(req.LikeableIds))
+	for _, id := range req.LikeableIds {
+		states[id] = LikeStateDTO{Count: counts[id], Liked: liked[id]}
+	}
+
+	return c.JSON(LikeStateResponseDTO{States: states})
 }

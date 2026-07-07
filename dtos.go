@@ -13,6 +13,27 @@ type LikeCreateDTO struct {
 type LikeUpdateDTO struct {
 }
 
+type LikeCountResponseDTO struct {
+	Likeable   string `json:"likeable"`
+	LikeableId string `json:"likeableId"`
+	Count      int64  `json:"count"`
+	Liked      bool   `json:"liked"`
+}
+
+type LikeStateRequestDTO struct {
+	Likeable    string   `json:"likeable"`
+	LikeableIds []string `json:"likeableIds"`
+}
+
+type LikeStateDTO struct {
+	Count int64 `json:"count"`
+	Liked bool  `json:"liked"`
+}
+
+type LikeStateResponseDTO struct {
+	States map[string]LikeStateDTO `json:"states"`
+}
+
 type LikeResponseDTO struct {
 	ID         string     `json:"id"`
 	LikerID    *string    `json:"likerId,omitempty"`

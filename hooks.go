@@ -2,7 +2,6 @@ package likeable
 
 import (
 	"context"
-	"errors"
 
 	"github.com/gofiber/fiber/v3"
 	auth "github.com/nicolasbonnici/gorest/auth"
@@ -12,14 +11,16 @@ import (
 )
 
 type LikeHooks struct {
-	db     database.Database
-	config *Config
+	db      database.Database
+	config  *Config
+	service *LikeService
 }
 
 func NewLikeHooks(db database.Database, config *Config) *LikeHooks {
 	return &LikeHooks{
-		db:     db,
-		config: config,
+		db:      db,
+		config:  config,
+		service: NewLikeService(db),
 	}
 }
 
@@ -79,27 +80,9 @@ func (h *LikeHooks) GetAllHook(c fiber.Ctx, conditions *[]query.Condition, order
 }
 
 func (h *LikeHooks) getLike(ctx context.Context, id any) (*Like, error) {
-	var like Like
 	idStr, ok := id.(string)
 	if !ok {
-		return nil, errors.New("invalid ID type")
+		return nil, errInvalidIDType
 	}
-
-	sql := "SELECT * FROM likes WHERE id = " + h.db.Dialect().Placeholder(1)
-	err := h.db.QueryRow(ctx, sql, idStr).Scan(
-		&like.Id,
-		&like.LikerId,
-		&like.LikedId,
-		&like.LikeableId,
-		&like.Likeable,
-		&like.IpAddress,
-		&like.UserAgent,
-		&like.LikedAt,
-		&like.UpdatedAt,
-		&like.CreatedAt,
-	)
-	if err != nil {
-		return nil, err
-	}
-	return &like, nil
+	return h.service.GetByID(ctx, idStr)
 }
