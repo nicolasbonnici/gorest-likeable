@@ -1,7 +1,8 @@
 # GoREST Likeable Plugin
 
 [![CI](https://github.com/nicolasbonnici/gorest-likeable/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/nicolasbonnici/gorest-likeable/actions/workflows/ci.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/nicolasbonnici/gorest-likeable)](https://goreportcard.com/report/github.com/nicolasbonnici/gorest-likeable)
+[![Go Reference](https://pkg.go.dev/badge/github.com/nicolasbonnici/gorest-likeable.svg)](https://pkg.go.dev/github.com/nicolasbonnici/gorest-likeable)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/nicolasbonnici/gorest-likeable)](https://github.com/nicolasbonnici/gorest-likeable/blob/HEAD/go.mod)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 A polymorphic like/reaction plugin for GoREST that allows adding likes to any resource type. This plugin is **standalone** and does not require gorest-auth - it supports both authenticated and anonymous likes.
